@@ -1,12 +1,41 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import MessageWindow from './components/MessageWindow';
+import MessageInput from './components/MessageInput';
+import CharacterDropdown from './components/CharacterDropdown';
 import { Message } from './interfaces/MessageInterface';
+import { Character } from './interfaces/CharacterInterface';
+
+const API_URL = process.env.REACT_APP_API_URL;
+const WS_URL = process.env.REACT_APP_WS_URL;
 
 const App: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [message, setMessage] = useState<string>('');
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const socketRef = useRef<WebSocket | null>(null);
+
+  // Fetch characters
+  useEffect(() => {
+    const fetchCharacters = async () => {
+      try {
+        const response = await fetch(`${API_URL}/characters`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch characters');
+        }
+        const data = await response.json();
+        const charactersWithIds = data.map((character: { name: string, description: string }) => ({
+          ...character,
+          id: character.name,
+        }));
+        setCharacters(charactersWithIds);
+      } catch (error) {
+        console.error('Error fetching characters:', error);
+      }
+    };
+
+    fetchCharacters();
+  }, []);
 
   // Handle incoming messages
   const handleMessage = useCallback((event: MessageEvent) => {
@@ -24,7 +53,7 @@ const App: React.FC = () => {
   useEffect(() => {
     const connectWebSocket = () => {
       if (socketRef.current === null || socketRef.current.readyState === WebSocket.CLOSED) {
-        const ws = new WebSocket('ws://localhost:8080/chat');
+        const ws = new WebSocket(`${WS_URL}/chat`);
         socketRef.current = ws;
 
         ws.onopen = () => {
@@ -55,29 +84,28 @@ const App: React.FC = () => {
     };
   }, [handleMessage]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (message.trim() && socketRef.current && isConnected) {
-      socketRef.current.send(JSON.stringify({ text: message }));
-      setMessage('');
+  const handleSendMessage = (message: string) => {
+    if (socketRef.current && isConnected) {
+      socketRef.current.send(JSON.stringify({
+        text: message,
+        character: selectedCharacter,
+      }));
     }
   };
 
   return (
     <div style={{ height: '100vh', backgroundColor: '#f0f0f0' }}>
       {isConnected ? (
-        <MessageWindow messages={messages}>
-          <form onSubmit={handleSubmit}>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              placeholder="Type your message here..."
-              rows={4}
-              style={{ width: '100%', marginBottom: '10px' }}
-            />
-            <button type="submit">Send</button>
-          </form>
-        </MessageWindow>
+        <>
+          <CharacterDropdown
+            characters={characters}
+            selectedCharacter={selectedCharacter}
+            onSelectCharacter={setSelectedCharacter}
+          />
+          <MessageWindow messages={messages}>
+            <MessageInput onSendMessage={handleSendMessage} />
+          </MessageWindow>
+        </>
       ) : (
         <div>Connecting to server...</div>
       )}
