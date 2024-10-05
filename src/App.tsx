@@ -14,27 +14,43 @@ const App: React.FC = () => {
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<string>('');
   const socketRef = useRef<WebSocket | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Fetch characters
+  // Fetch characters and chat history
   useEffect(() => {
-    const fetchCharacters = async () => {
+    const fetchData = async () => {
       try {
-        const response = await fetch(`${API_URL}/characters`);
-        if (!response.ok) {
+        // Fetch characters (existing code)
+        const charactersResponse = await fetch(`${API_URL}/characters`);
+        if (!charactersResponse.ok) {
           throw new Error('Failed to fetch characters');
         }
-        const data = await response.json();
-        const charactersWithIds = data.map((character: { name: string, description: string }) => ({
+        const charactersData = await charactersResponse.json();
+        const charactersWithIds = charactersData.map((character: { name: string, description: string }) => ({
           ...character,
           id: character.name,
         }));
         setCharacters(charactersWithIds);
+
+        // Fetch chat history
+        const historyResponse = await fetch(`${API_URL}/history`);
+        if (!historyResponse.ok) {
+          throw new Error('Failed to fetch chat history');
+        }
+        const historyData = await historyResponse.json();
+        setMessages(historyData.map((message: any) => ({
+          id: message.id || Date.now(),
+          senderId: message.senderId,
+          text: message.text,
+          isUser: message.isUser,
+          timestamp: message.timestamp || Date.now(),
+        })));
       } catch (error) {
-        console.error('Error fetching characters:', error);
+        console.error('Error fetching data:', error);
       }
     };
 
-    fetchCharacters();
+    fetchData();
   }, []);
 
   // Handle incoming messages
@@ -47,6 +63,7 @@ const App: React.FC = () => {
       isUser: data.isUser,
       timestamp: Date.now(),
     }]);
+    setIsLoading(false); // Set loading to false when message is received
   }, []);
 
   // Initialize WebSocket connection
@@ -90,6 +107,7 @@ const App: React.FC = () => {
         text: message,
         character: selectedCharacter,
       }));
+      setIsLoading(true); // Set loading to true when message is sent
     }
   };
 
@@ -97,13 +115,16 @@ const App: React.FC = () => {
     <div style={{ height: '100vh', backgroundColor: '#f0f0f0' }}>
       {isConnected ? (
         <>
-          <CharacterDropdown
-            characters={characters}
-            selectedCharacter={selectedCharacter}
-            onSelectCharacter={setSelectedCharacter}
-          />
-          <MessageWindow messages={messages}>
-            <MessageInput onSendMessage={handleSendMessage} />
+          <MessageWindow messages={messages} isLoading={isLoading}>
+            <CharacterDropdown
+              characters={characters}
+              selectedCharacter={selectedCharacter}
+              onSelectCharacter={setSelectedCharacter}
+            />
+            <MessageInput 
+              onSendMessage={handleSendMessage} 
+              selectedCharacter={selectedCharacter}
+            />
           </MessageWindow>
         </>
       ) : (

@@ -1,12 +1,14 @@
 import React from 'react';
+import LoadingSpinner from './LoadingSpinner';
 import { Message } from '../interfaces/MessageInterface';
 
 interface MessageWindowProps {
   messages: Message[];
+  isLoading: boolean;
   children: React.ReactNode;
 }
 
-const MessageWindow: React.FC<MessageWindowProps> = ({ messages, children }) => {
+const MessageWindow: React.FC<MessageWindowProps> = ({ messages, isLoading, children }) => {
   // Sort messages by timestamp
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
 
@@ -68,6 +70,7 @@ const MessageWindow: React.FC<MessageWindowProps> = ({ messages, children }) => 
             )}
           </div>
         ))}
+        {isLoading && <LoadingSpinner />}
       </div>
       {children}
     </div>

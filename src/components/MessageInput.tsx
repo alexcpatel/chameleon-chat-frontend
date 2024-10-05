@@ -1,63 +1,70 @@
-import React, { useState, KeyboardEvent } from 'react';
+import React, { useState } from 'react';
+import styled from 'styled-components';
 import { IoSend } from 'react-icons/io5';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
+  selectedCharacter: string;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
-  const [message, setMessage] = useState<string>('');
+const InputContainer = styled.div`
+  display: flex;
+  padding: 10px;
+  align-items: center;
+`;
 
-  const handleSubmit = (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (message.trim()) {
+const StyledInput = styled.input`
+  flex-grow: 1;
+  padding: 10px 15px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 18px;
+  margin-right: 10px;
+`;
+
+const SendButton = styled.button<{ disabled: boolean }>`
+  width: 40px;
+  height: 40px;
+  background-color: ${props => props.disabled ? '#cccccc' : '#007bff'};
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: ${props => props.disabled ? 'not-allowed' : 'pointer'};
+  transition: background-color 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+
+  &:hover {
+    background-color: ${props => props.disabled ? '#cccccc' : '#0056b3'};
+  }
+`;
+
+const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, selectedCharacter }) => {
+  const [message, setMessage] = useState('');
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (message.trim() && selectedCharacter) {
       onSendMessage(message);
       setMessage('');
     }
   };
 
-  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', alignItems: 'center', padding: '10px' }}>
-      <textarea
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
-        onKeyDown={handleKeyPress}
-        rows={1}
-        style={{
-          flex: 1,
-          padding: '10px',
-          paddingLeft: '20px',
-          borderRadius: '20px',
-          border: '1px solid #ccc',
-          resize: 'none',
-          fontSize: '16px',
-          fontFamily: "'Roboto', sans-serif", // Updated to Roboto
-        }}
-      />
-      <button
-        type="submit"
-        style={{
-          background: 'none',
-          border: 'none',
-          cursor: 'pointer',
-          marginLeft: '10px',
-          fontSize: '24px',
-          color: '#007bff',
-          transition: 'color 0.3s ease', // Add transition for smooth color change
-          fontFamily: "'Roboto', sans-serif", // Updated to Roboto
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#0056b3'} // Darker blue on hover
-        onMouseLeave={(e) => e.currentTarget.style.color = '#007bff'} // Return to original color
-      >
-        <IoSend />
-      </button>
+    <form onSubmit={handleSubmit}>
+      <InputContainer>
+        <StyledInput
+          type="text"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Type a message..."
+        />
+        <SendButton type="submit" disabled={!selectedCharacter}>
+          <IoSend size={20} />
+        </SendButton>
+      </InputContainer>
     </form>
   );
 };
